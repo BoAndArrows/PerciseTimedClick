@@ -1,0 +1,1 @@
+This is a program I am writing for fun to click at specific time intervals. I am messing around with this game that has time based random events.
