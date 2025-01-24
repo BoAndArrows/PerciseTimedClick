@@ -8,11 +8,14 @@ import keyboard
 
 # Global flag to control clicking
 clicking = False
-hotkey_button = "ctrl+s"
+hotkey_button = "ctrl+t"
+
 
 # Function to perform clicking at the specified time
 def click_at_target_time(target_second, target_millisecond):
-    global clicking
+    global clicking, status
+    update_status_label("Waiting to Click")
+
     while clicking:
         # Get the current time
         current_time = datetime.datetime.now()
@@ -23,9 +26,9 @@ def click_at_target_time(target_second, target_millisecond):
 
         # Check if current time matches the target time
         if current_second == target_second and current_millisecond == target_millisecond:
-            print(f"Target time reached! Clicking at {target_second}s:{target_millisecond}ms")
+            print(f"Target time reached! Clicked at {current_second}s:{round(current_time.microsecond//1000, 1)}ms")
             pyautogui.click()  # Perform the click
-            messagebox.showinfo("Click Triggered", f"Clicked at {target_second} seconds and {target_millisecond} milliseconds.")
+            update_status_label("Click Triggered")
             break  # Exit the loop after clicking once
 
         # Sleep for a small amount to avoid high CPU usage
@@ -63,7 +66,7 @@ def start_clicking():
 def stop_clicking():
     global clicking
     clicking = False
-    messagebox.showinfo("Stopped", "Clicking process has been stopped.")
+    update_status_label("Stopped Waiting")
 
 def hotkey_process():
     global clicking
@@ -75,7 +78,7 @@ def hotkey_process():
 # Hotkey listener for start and stop
 def listen_for_hotkeys():
     global hotkey_button
-    keyboard.add_hotkey(hotkey_button, hotkey_process)]
+    keyboard.add_hotkey(hotkey_button, hotkey_process)
     keyboard.wait()
 
 def update_hotkey():
@@ -83,24 +86,30 @@ def update_hotkey():
     keyboard.clear_all_hotkeys()
     hotkey_button = hotkey_entry.get()
 
+def update_status_label(new_status):
+    current_status_label.config(text=f"Status: {new_status}")
+    root.update_idletasks()  # Ensure the UI gets updated immediately
+
 
 # Set up the main window
 root = tk.Tk()
-root.title("AutoClicker at Specific Time with Hotkeys")
+root.title("Time Percise Clicker")
 root.geometry("400x300")
 
 # Get the screen dimensions to set the window size based on display
 screen_width = root.winfo_screenwidth()
 screen_height = root.winfo_screenheight()
-window_width = int(screen_width * 0.4)  # 50% of the screen width
-window_height = int(screen_height * 0.4)  # 30% of the screen height
+window_width = int(screen_width * 0.3)  # 50% of the screen width
+window_height = int(screen_height * 0.5)  # 30% of the screen height
 x_offset = (screen_width - window_width) // 2
 y_offset = (screen_height - window_height) // 2
 root.geometry(f"{window_width}x{window_height}+{x_offset}+{y_offset}")
 
-# Create GUI elements
+# Create GUI elements using grid layout
+
+# Target time label
 target_time_label = tk.Label(root, text="Set Target Time (Seconds and Milliseconds) or choose from preset timestamps")
-target_time_label.pack(pady=10)
+target_time_label.grid(row=0, column=0, columnspan=2, pady=10)
 
 # Create radio buttons for predefined timestamps
 selected_timestamp = tk.StringVar(value="Custom Time")
@@ -112,34 +121,49 @@ time_stamps = [
     ("45:33")
 ]
 
+row = 1  # Start from row 1 for radio buttons
 for time_stamp in time_stamps:
     time_str = time_stamp
     radio_button = tk.Radiobutton(root, text=f"Time: {time_str}", variable=selected_timestamp, value=time_str)
-    radio_button.pack()
+    radio_button.grid(row=row, column=0, sticky="w")
+    row += 1
 
 # Radio button for "Custom Time" option
 radio_button_custom = tk.Radiobutton(root, text="Custom Time", variable=selected_timestamp, value="Custom Time")
-radio_button_custom.pack(pady=5)
+radio_button_custom.grid(row=row, column=0, sticky="w", pady=5)
+row += 1
 
 # Entry fields for custom second and millisecond if "Custom Time" is selected
 second_label = tk.Label(root, text="Second (0-59):")
-second_label.pack(pady=5)
-
+second_label.grid(row=row, column=0, sticky="e", padx=5)
 second_entry = tk.Entry(root)
-second_entry.pack(pady=5)
+second_entry.grid(row=row, column=1, padx=5)
+row += 1
 
 ms_label = tk.Label(root, text="Millisecond (0-999):")
-ms_label.pack(pady=5)
-
+ms_label.grid(row=row, column=0, sticky="e", padx=5)
 ms_entry = tk.Entry(root)
-ms_entry.pack(pady=5)
+ms_entry.grid(row=row, column=1, padx=5)
+row += 1
+
+hotkey_entry_label = tk.Label(root, text="Start/Stop Hotkey (e.g., 'ctrl+p' or 'p'):")
+hotkey_entry_label.grid(row=row, column=0, padx = 5, pady=5)
+
+hotkey_entry = tk.Entry(root)
+hotkey_entry.grid(row=row, column=1, padx = 5, pady=5)
+
+hotkey_set_button = tk.Button(root, text="Set Hotkey", command = update_hotkey)
+hotkey_set_button.grid(row=row, column=2, padx = 5, pady=5)
+
+row += 1
 
 # Start clicking button
 start_button = tk.Button(root, text="Start Clicking", command=start_clicking)
-start_button.pack(pady=20)
+start_button.grid(row=row, column=0, columnspan=2, pady=20)
+row += 1
 
-hotkey_entry_label = tk.Label(root, text="Start/Stop Hotkey enter in such format: \"Ctrl+P\", or \"P\"")
-hot
+current_status_label = tk.Label(root, text="NOT Clicking")
+current_status_label.grid(row=row, column= 0, columnspan=2, pady=10)
 
 # Start a background thread for listening to hotkeys
 hotkey_thread = threading.Thread(target=listen_for_hotkeys, daemon=True)
