@@ -4,11 +4,10 @@ import datetime
 import tkinter as tk
 from tkinter import messagebox
 import threading
-import keyboard
 
-# Global flag to control clicking
 clicking = False
-hotkey_button = "ctrl+~"
+
+hotkey_input = []  # List to store the keys pressed (including modifiers)
 
 # Function to perform clicking at the specified time
 def click_at_target_time(target_second, target_millisecond):
@@ -25,7 +24,6 @@ def click_at_target_time(target_second, target_millisecond):
 
         # Check if current time matches the target time
         if current_second == target_second and current_millisecond == target_millisecond:
-            print(f"Target time reached! Clicked at {current_second}s:{round(current_time.microsecond//1000, 1)}ms")
             pyautogui.click()  # Perform the click
             update_status_label("Click Triggered")
             break  # Exit the loop after clicking once
@@ -67,25 +65,7 @@ def stop_clicking():
     clicking = False
     update_status_label("Stopped Waiting")
 
-
-def hotkey_process():
-    global clicking
-    if not clicking:
-        start_clicking()
-    else:
-        stop_clicking()
-
-# Hotkey listener for start and stop
-def listen_for_hotkeys():
-    global hotkey_button
-    keyboard.add_hotkey(hotkey_button, hotkey_process)
-    keyboard.wait()
-
-def update_hotkey():
-    global hotkey_button
-    keyboard.clear_all_hotkeys()
-    hotkey_button = hotkey_entry.get()
-
+# Function to update the status label
 def update_status_label(new_status):
     current_status_label.config(text=f"Status: {new_status}")
     root.update_idletasks()  # Ensure the UI gets updated immediately
@@ -93,10 +73,24 @@ def update_status_label(new_status):
 # Function to unfocus entry boxes when clicking elsewhere (outside entry boxes)
 def unfocus_entry(event):
     # Check if the click was inside the entry box
-    if event.widget not in [second_entry, ms_entry, hotkey_entry]:
+    if event.widget not in [second_entry, ms_entry]:
         # If the click was outside the Entry widgets, unfocus the Entry widgets
         root.focus_set()  # Move the focus to the root window
 
+# Function to start recording the hotkey input
+def record_hotkey(event):
+    global hotkey_input
+    key = event.keysym
+
+    # Stop recording after two keys
+    if len(hotkey_input) < 2:
+        if key not in hotkey_input:  # Avoid adding duplicates
+            hotkey_input.append(key)
+            hotkey_label.config(text=f"Hotkey: {' + '.join(hotkey_input)}")  # Display pressed keys
+
+    # Stop recording after two keys
+    if len(hotkey_input) == 2:
+        hotkey_button.config(state="disabled")  # Disable the button once two keys are pressed
 
 # Set up the main window
 root = tk.Tk()
@@ -156,28 +150,30 @@ row += 1
 # Bind the mouse click event to unfocus the entry widgets if clicked outside
 root.bind("<Button-1>", unfocus_entry)
 
-hotkey_entry_label = tk.Label(root, text="Start/Stop Hotkey (e.g., 'ctrl+p' or 'p'):")
-hotkey_entry_label.grid(row=row, column=0, padx = 5, pady=5)
+# Button to start recording hotkey input
+hotkey_button = tk.Button(root, text="Set Hotkey", width=25)
+hotkey_button.grid(row=row, column=0, columnspan=2, pady=10)
 
-hotkey_entry = tk.Entry(root)
-hotkey_entry.grid(row=row, column=1, padx = 5, pady=5)
+# Label to show the pressed hotkey
+hotkey_label = tk.Label(root, text="Hotkey: Not set yet")
+hotkey_label.grid(row=row + 1, column=0, columnspan=2)
 
-hotkey_set_button = tk.Button(root, text="Set Hotkey", command = update_hotkey)
-hotkey_set_button.grid(row=row, column=2, padx = 5, pady = 5)
+# Bind key press events to record the hotkey input
+root.bind("<KeyPress>", record_hotkey)
 
-row += 1
+row += 2
 
 # Start clicking button
 start_button = tk.Button(root, text="Start Clicking", command=start_clicking)
 start_button.grid(row=row, column=0, columnspan=2, pady=20)
+
+stop_button = tk.Button(root, text="Stop Clicking", command=stop_clicking)
+stop_button.grid(row=row, column=1, columnspan=2, pady=20)
 row += 1
 
+# Current status label
 current_status_label = tk.Label(root, text="NOT Clicking")
-current_status_label.grid(row=row, column= 0, columnspan=2, pady=10)
-
-# Start a background thread for listening to hotkeys
-hotkey_thread = threading.Thread(target=listen_for_hotkeys, daemon=True)
-hotkey_thread.start()
+current_status_label.grid(row=row, column=0, columnspan=2, pady=10)
 
 # Start the GUI loop
 root.mainloop()
