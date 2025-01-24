@@ -7,8 +7,6 @@ import threading
 
 clicking = False
 
-hotkey_input = []  # List to store the keys pressed (including modifiers)
-
 # Function to perform clicking at the specified time
 def click_at_target_time(target_second, target_millisecond):
     global clicking
@@ -22,14 +20,20 @@ def click_at_target_time(target_second, target_millisecond):
         current_second = current_time.second
         current_millisecond = current_time.microsecond // 1000  # Convert microseconds to milliseconds
 
-        # Check if current time matches the target time
-        if current_second == target_second and current_millisecond == target_millisecond:
+        # Debugging: print the current and target times to check the comparison
+        #print(f"Current Time: {current_second} sec, {current_millisecond} ms")
+        #print(f"Target Time: {target_second} sec, {target_millisecond} ms")
+
+        # Check if current time matches the target time (with a tolerance of +/- 10 ms)
+        if (current_second == target_second) and (abs(current_millisecond - target_millisecond) <= 1):
             pyautogui.click()  # Perform the click
-            update_status_label("Click Triggered")
+            current_hour = current_time.hour
+            current_minute = current_time.minute
+            update_status_label(f"Click Triggered at {current_hour}:{current_minute}:{current_second}:{current_millisecond}")
             break  # Exit the loop after clicking once
 
         # Sleep for a small amount to avoid high CPU usage
-        time.sleep(0.01)
+        time.sleep(0.001)
 
 # Function to start the clicker process from GUI inputs
 def start_clicking():
@@ -63,7 +67,7 @@ def start_clicking():
 def stop_clicking():
     global clicking
     clicking = False
-    update_status_label("Stopped Waiting")
+    update_status_label("Stopped by User")
 
 # Function to update the status label
 def update_status_label(new_status):
@@ -76,21 +80,6 @@ def unfocus_entry(event):
     if event.widget not in [second_entry, ms_entry]:
         # If the click was outside the Entry widgets, unfocus the Entry widgets
         root.focus_set()  # Move the focus to the root window
-
-# Function to start recording the hotkey input
-def record_hotkey(event):
-    global hotkey_input
-    key = event.keysym
-
-    # Stop recording after two keys
-    if len(hotkey_input) < 2:
-        if key not in hotkey_input:  # Avoid adding duplicates
-            hotkey_input.append(key)
-            hotkey_label.config(text=f"Hotkey: {' + '.join(hotkey_input)}")  # Display pressed keys
-
-    # Stop recording after two keys
-    if len(hotkey_input) == 2:
-        hotkey_button.config(state="disabled")  # Disable the button once two keys are pressed
 
 # Set up the main window
 root = tk.Tk()
@@ -149,19 +138,6 @@ row += 1
 
 # Bind the mouse click event to unfocus the entry widgets if clicked outside
 root.bind("<Button-1>", unfocus_entry)
-
-# Button to start recording hotkey input
-hotkey_button = tk.Button(root, text="Set Hotkey", width=25)
-hotkey_button.grid(row=row, column=0, columnspan=2, pady=10)
-
-# Label to show the pressed hotkey
-hotkey_label = tk.Label(root, text="Hotkey: Not set yet")
-hotkey_label.grid(row=row + 1, column=0, columnspan=2)
-
-# Bind key press events to record the hotkey input
-root.bind("<KeyPress>", record_hotkey)
-
-row += 2
 
 # Start clicking button
 start_button = tk.Button(root, text="Start Clicking", command=start_clicking)
