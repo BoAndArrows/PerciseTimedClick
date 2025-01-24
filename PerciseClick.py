@@ -1,11 +1,14 @@
 import pyautogui
+import pydirectinput
 import time
 import datetime
 import tkinter as tk
 from tkinter import messagebox
 import threading
+import keyboard
 
 clicking = False
+hotkey = "ctrl+t"
 
 # Function to perform clicking at the specified time
 def click_at_target_time(target_second, target_millisecond):
@@ -21,15 +24,16 @@ def click_at_target_time(target_second, target_millisecond):
         current_millisecond = current_time.microsecond // 1000  # Convert microseconds to milliseconds
 
         # Debugging: print the current and target times to check the comparison
-        #print(f"Current Time: {current_second} sec, {current_millisecond} ms")
-        #print(f"Target Time: {target_second} sec, {target_millisecond} ms")
+        print(f"Current Time: {current_second} sec, {current_millisecond} ms")
+        print(f"Target Time: {target_second} sec, {target_millisecond} ms")
 
         # Check if current time matches the target time (with a tolerance of +/- 10 ms)
-        if (current_second == target_second) and (abs(current_millisecond - target_millisecond) <= 1):
-            pyautogui.click()  # Perform the click
+        if (current_second == target_second) and (abs(target_millisecond - current_millisecond) <= 0):
+            pydirectinput.click()  # Perform the click
             current_hour = current_time.hour
             current_minute = current_time.minute
             update_status_label(f"Click Triggered at {current_hour}:{current_minute}:{current_second}:{current_millisecond}")
+            clicking = False
             break  # Exit the loop after clicking once
 
         # Sleep for a small amount to avoid high CPU usage
@@ -80,6 +84,28 @@ def unfocus_entry(event):
     if event.widget not in [second_entry, ms_entry]:
         # If the click was outside the Entry widgets, unfocus the Entry widgets
         root.focus_set()  # Move the focus to the root window
+
+def record_hotkey(event):
+    global hotkey_input
+    key = event.keysym
+
+    # Stop recording after two keys
+    if len(hotkey_input) < 2:
+        if key not in hotkey_input:  # Avoid adding duplicates
+            hotkey_input.append(key)
+            hotkey_label.config(text=f"Hotkey: {' + '.join(hotkey_input)}")
+
+def hotkey_process():
+    global clicking
+    if not clicking:
+        start_clicking()
+    else:
+        stop_clicking()
+
+def listen_for_hotkeys():
+    global hotkey_button
+    keyboard.add_hotkey(hotkey, hotkey_process)
+    keyboard.wait()
 
 # Set up the main window
 root = tk.Tk()
@@ -139,6 +165,13 @@ row += 1
 # Bind the mouse click event to unfocus the entry widgets if clicked outside
 root.bind("<Button-1>", unfocus_entry)
 
+hotkey_label = tk.Label(root, text= f"Current Hotkey: {hotkey}")
+hotkey_label.grid(row=row, column=0, pady=5)
+
+set_hotkey_button = tk.Button(root, text="Set Hotkey", command=record_hotkey)
+set_hotkey_button.grid(row=row, column=1, pady=5)
+
+row+=1
 # Start clicking button
 start_button = tk.Button(root, text="Start Clicking", command=start_clicking)
 start_button.grid(row=row, column=0, columnspan=2, pady=20)
@@ -150,6 +183,9 @@ row += 1
 # Current status label
 current_status_label = tk.Label(root, text="NOT Clicking")
 current_status_label.grid(row=row, column=0, columnspan=2, pady=10)
+
+hotkey_thread = threading.Thread(target=listen_for_hotkeys, daemon=True)
+hotkey_thread.start()
 
 # Start the GUI loop
 root.mainloop()
