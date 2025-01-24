@@ -8,12 +8,11 @@ import keyboard
 
 # Global flag to control clicking
 clicking = False
-hotkey_button = "ctrl+t"
-
+hotkey_button = "ctrl+~"
 
 # Function to perform clicking at the specified time
 def click_at_target_time(target_second, target_millisecond):
-    global clicking, status
+    global clicking
     update_status_label("Waiting to Click")
 
     while clicking:
@@ -68,6 +67,7 @@ def stop_clicking():
     clicking = False
     update_status_label("Stopped Waiting")
 
+
 def hotkey_process():
     global clicking
     if not clicking:
@@ -90,10 +90,17 @@ def update_status_label(new_status):
     current_status_label.config(text=f"Status: {new_status}")
     root.update_idletasks()  # Ensure the UI gets updated immediately
 
+# Function to unfocus entry boxes when clicking elsewhere (outside entry boxes)
+def unfocus_entry(event):
+    # Check if the click was inside the entry box
+    if event.widget not in [second_entry, ms_entry, hotkey_entry]:
+        # If the click was outside the Entry widgets, unfocus the Entry widgets
+        root.focus_set()  # Move the focus to the root window
+
 
 # Set up the main window
 root = tk.Tk()
-root.title("Time Percise Clicker")
+root.title("Time Precise Clicker")
 root.geometry("400x300")
 
 # Get the screen dimensions to set the window size based on display
@@ -146,6 +153,9 @@ ms_entry = tk.Entry(root)
 ms_entry.grid(row=row, column=1, padx=5)
 row += 1
 
+# Bind the mouse click event to unfocus the entry widgets if clicked outside
+root.bind("<Button-1>", unfocus_entry)
+
 hotkey_entry_label = tk.Label(root, text="Start/Stop Hotkey (e.g., 'ctrl+p' or 'p'):")
 hotkey_entry_label.grid(row=row, column=0, padx = 5, pady=5)
 
@@ -153,7 +163,7 @@ hotkey_entry = tk.Entry(root)
 hotkey_entry.grid(row=row, column=1, padx = 5, pady=5)
 
 hotkey_set_button = tk.Button(root, text="Set Hotkey", command = update_hotkey)
-hotkey_set_button.grid(row=row, column=2, padx = 5, pady=5)
+hotkey_set_button.grid(row=row, column=2, padx = 5, pady = 5)
 
 row += 1
 
