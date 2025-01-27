@@ -37,7 +37,7 @@ def click_at_target_time(target_second, target_millisecond):
             break  # Exit the loop after clicking once
 
         # Sleep for a small amount to avoid high CPU usage
-        time.sleep(0.001)
+        time.sleep(0.0005)
 
 # Function to start the clicker process from GUI inputs
 def start_clicking():
