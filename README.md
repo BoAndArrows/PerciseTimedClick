@@ -1,1 +1,1 @@
-This is a program I am writing for fun. I want it to click on an exact second and milisecond computer's internal clock. I am messing around with this game that has time-based random events and needed this tool.
+This is a program I am writing for fun. I want it to click on an exact second and millisecond based on your computer's internal clock. I am messing around with this game that has time-based random events and needed this tool.
