@@ -2,8 +2,16 @@ import pyautogui
 import pydirectinput
 import time
 import datetime
+
+from PIL import Image, ImageTk
+
+
 import tkinter as tk
 from tkinter import messagebox
+import tkinter.ttk as ttk
+
+from tktooltip import ToolTip
+
 import threading
 import keyboard
 
@@ -13,6 +21,7 @@ hotkey = "ctrl+t"
 # Function to perform clicking at the specified time
 def click_at_target_time(target_second, target_millisecond):
     global clicking
+    root.bell()
     update_status_label("Waiting to Click")
 
     while clicking:
@@ -107,6 +116,8 @@ def listen_for_hotkeys():
     keyboard.add_hotkey(hotkey, hotkey_process)
     keyboard.wait()
 
+
+
 # Set up the main window
 root = tk.Tk()
 root.title("Time Precise Clicker")
@@ -121,6 +132,11 @@ x_offset = (screen_width - window_width) // 2
 y_offset = (screen_height - window_height) // 2
 root.geometry(f"{window_width}x{window_height}+{x_offset}+{y_offset}")
 
+#importing assets
+info_badge_image_PIL = Image.open("Assets/info_badge_image.png")
+#info_badge_image = ImageTk.PhotoImage(info_badge_image_PIL)
+small_info_badge_image = info_badge_image_PIL.resize((20, 20), Image.LANCZOS)
+info_badge_image = ImageTk.PhotoImage(small_info_badge_image)
 # Create GUI elements using grid layout
 
 # Target time label
@@ -144,22 +160,34 @@ for time_stamp in time_stamps:
     radio_button.grid(row=row, column=0, sticky="w")
     row += 1
 
+#Click on every XX Second and XXX Milisecond
+radio_button_everyX = tk.Radiobutton(root, text="Click Every XX:XXX", variable=selected_timestamp, value="X Custom time")
+radio_button_everyX.grid(row=row, column=0, sticky="w", pady=5)
+
+row += 1
 # Radio button for "Custom Time" option
 radio_button_custom = tk.Radiobutton(root, text="Custom Time", variable=selected_timestamp, value="Custom Time")
-radio_button_custom.grid(row=row, column=0, sticky="w", pady=5)
+radio_button_custom.grid(row=row, column=0, sticky="w")
 row += 1
 
 # Entry fields for custom second and millisecond if "Custom Time" is selected
-second_label = tk.Label(root, text="Second (0-59):")
-second_label.grid(row=row, column=0, sticky="e", padx=5)
+seconds_tooltip_icon = tk.Canvas(root, width=20, height=20)
+seconds_tooltip_icon.create_image(0, 0, anchor=tk.NW, image=info_badge_image)
+seconds_tooltip_icon.grid(row=row, column=0, sticky="e")
+second_label = tk.Label(root, text="Seconds:")
+second_label.grid(row=row, column=0, sticky="w", padx=5)
 second_entry = tk.Entry(root)
-second_entry.grid(row=row, column=1, padx=5)
+second_entry.grid(row=row, column=1,sticky="w", padx=5)
 row += 1
 
-ms_label = tk.Label(root, text="Millisecond (0-999):")
-ms_label.grid(row=row, column=0, sticky="e", padx=5)
+
+milli_tooltip_icon = tk.Canvas(root, width=20, height=20)
+milli_tooltip_icon.create_image(0, 0, anchor=tk.NW, image=info_badge_image)
+milli_tooltip_icon.grid(row=row, column=0, sticky="e")
+ms_label = tk.Label(root, text="Millisecond:")
+ms_label.grid(row=row, column=0, sticky="w", padx=5)
 ms_entry = tk.Entry(root)
-ms_entry.grid(row=row, column=1, padx=5)
+ms_entry.grid(row=row, column=1, sticky="w", padx=5)
 row += 1
 
 # Bind the mouse click event to unfocus the entry widgets if clicked outside
