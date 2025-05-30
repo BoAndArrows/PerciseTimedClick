@@ -17,6 +17,7 @@ import keyboard
 
 clicking = False
 hotkey = "ctrl+t"
+Xtime = False
 
 # Function to perform clicking at the specified time
 def click_at_target_time(target_second, target_millisecond):
@@ -37,29 +38,59 @@ def click_at_target_time(target_second, target_millisecond):
         print(f"Target Time: {target_second} sec, {target_millisecond} ms")
 
         # Check if current time matches the target time (with a tolerance of +/- 10 ms)
-        if (current_second == target_second) and (abs(target_millisecond - current_millisecond) <= 0):
+        if (current_second == target_second) and (target_millisecond == current_millisecond) and not Xtime:
             pydirectinput.click()  # Perform the click
             current_hour = current_time.hour
             current_minute = current_time.minute
             update_status_label(f"Click Triggered at {current_hour}:{current_minute}:{current_second}:{current_millisecond}")
             clicking = False
             break  # Exit the loop after clicking once
-
         # Sleep for a small amount to avoid high CPU usage
         time.sleep(0.0005)
+    
+def click_at_X_target(target_second, target_millisecond):
+    global clicking
+    global Xtime
+    root.bell()
+    update_status_label("Waiting to Click")
+
+    while(clicking):
+        current_time = datetime.datetime.now()
+        current_second = str(current_time.second)
+        current_millisecond = str((current_time.microsecond)//1000)
+
+        print(f"Current Time: {current_second} sec, {current_millisecond} ms")
+        print(f"Target Time: {target_second} sec, {target_millisecond} ms")
+
+        if current_second.endswith(str(target_second)) and current_millisecond.endswith(str(target_millisecond)):
+            pydirectinput.click()
+            current_hour = current_time.hour
+            current_minute = current_time.minute
+            update_status_label(f"Click Triggered at {current_hour}:{current_minute}:{current_second}:{current_millisecond}")
+            clicking = False
+            break  # Exit the loop after clicking once
+        # Sleep for a small amount to avoid high CPU usage
+        time.sleep(0.0005)
+    
+
 
 # Function to start the clicker process from GUI inputs
 def start_clicking():
     global clicking
+    global Xtime
     try:
         # Get user input from the entry fields or radio button selection
-        if selected_timestamp.get() == "Custom Time":
+        timeValue = selected_timestamp.get()
+        if timeValue == "Custom Time":
+            target_second = int(second_entry.get())
+            target_millisecond = int(ms_entry.get())
+        elif timeValue == "X Custom Time":
+            Xtime = True
             target_second = int(second_entry.get())
             target_millisecond = int(ms_entry.get())
         else:
             # Extract the second and millisecond from the selected timestamp
-            selected_time = selected_timestamp.get()
-            target_second, target_millisecond = map(int, selected_time.split(":"))
+            target_second, target_millisecond = map(int, timeValue.split(":"))
         
         if target_second < 0 or target_second > 59:
             raise ValueError("Second must be between 0 and 59.")
@@ -69,12 +100,12 @@ def start_clicking():
         clicking = True  # Set the clicking flag to True
 
         # Start the clicking process in a separate thread to not block the GUI
-        click_thread = threading.Thread(target=click_at_target_time, args=(target_second, target_millisecond))
+        click_thread = threading.Thread(target=click_at_X_target, args=(target_second, target_millisecond)) if Xtime else threading.Thread(target=click_at_target_time, args=(target_second, target_millisecond))
         click_thread.daemon = True
         click_thread.start()
 
     except ValueError as e:
-        messagebox.showerror("Invalid Input", f"Error: {e}")
+        messagebox.showerror("Something Went Wrong, Invalid Input", f"Error: {e}")
 
 # Function to stop the clicking process
 def stop_clicking():
@@ -161,18 +192,36 @@ for time_stamp in time_stamps:
     row += 1
 
 #Click on every XX Second and XXX Milisecond
-radio_button_everyX = tk.Radiobutton(root, text="Click Every XX:XXX", variable=selected_timestamp, value="X Custom time")
+radio_button_everyX = tk.Radiobutton(root, text="Click Every XX:XXX", variable=selected_timestamp, value="X Custom Time")
 radio_button_everyX.grid(row=row, column=0, sticky="w", pady=5)
 
+everyX_tooltip_icon = tk.Canvas(root, width=20, height=20)
+everyX_tooltip_icon.create_image(0, 0, anchor=tk.NW, image=info_badge_image)
+everyX_tooltip_icon.grid(row=row, column=0, sticky="e")
+ToolTip(everyX_tooltip_icon, msg="This option will click whenever the target second and target millisecond is found, for example\n" \
+                                "when you enter 5:21, whenever 5 is seen in the ones place for the second it will click \n" \
+                                "i.e 05, 15, 25, 35, etc. same with milliseconds.\n" \
+                                "NOTE: if you specify 10 it will only look for 10 or X10, if u want it to click on 0, simply put 0", delay=0.5)
 row += 1
+
 # Radio button for "Custom Time" option
 radio_button_custom = tk.Radiobutton(root, text="Custom Time", variable=selected_timestamp, value="Custom Time")
 radio_button_custom.grid(row=row, column=0, sticky="w")
+
+custom_tooltip_icon = tk.Canvas(root, width=20, height=20)
+custom_tooltip_icon.create_image(0, 0, anchor=tk.NW, image=info_badge_image)
+custom_tooltip_icon.grid(row=row, column=0, sticky="e")
+ToolTip(custom_tooltip_icon, msg="This option will click whenever a specific target second and target millisecond is found\n" \
+                                "for example entering 01:330 will click when the second and millisecond on the clock\n" \
+                                " matches regardless of minute hour etc", delay=0.5)
 row += 1
 
 # Entry fields for custom second and millisecond if "Custom Time" is selected
 seconds_tooltip_icon = tk.Canvas(root, width=20, height=20)
 seconds_tooltip_icon.create_image(0, 0, anchor=tk.NW, image=info_badge_image)
+ToolTip(seconds_tooltip_icon, msg="Enter any reachable second from 0 - 59. \n" \
+                                  "IMPORTANT: When selecting custom time make sure the \n" \
+                                  "entry is 0 padded. EX. \"05\"")
 seconds_tooltip_icon.grid(row=row, column=0, sticky="e")
 second_label = tk.Label(root, text="Seconds:")
 second_label.grid(row=row, column=0, sticky="w", padx=5)
@@ -183,6 +232,9 @@ row += 1
 
 milli_tooltip_icon = tk.Canvas(root, width=20, height=20)
 milli_tooltip_icon.create_image(0, 0, anchor=tk.NW, image=info_badge_image)
+ToolTip(milli_tooltip_icon, msg="Enter any reachable second from 0 - 999. \n" \
+                                  "IMPORTANT: When selecting custom time make sure the \n" \
+                                  "entry is 0 padded. EX. \"003\" or \"023\"")
 milli_tooltip_icon.grid(row=row, column=0, sticky="e")
 ms_label = tk.Label(root, text="Millisecond:")
 ms_label.grid(row=row, column=0, sticky="w", padx=5)
